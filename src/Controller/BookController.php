@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Dto\BookInput;
 use App\Dto\BookOutput;
 use App\Entity\Book;
-use App\Entity\Category;
 use App\Repository\BookRepository;
 use App\Repository\CategoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,7 +22,6 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 /**
  * @Route("/api")
  */
-
 class BookController extends AbstractController
 {
     /**
@@ -46,11 +44,7 @@ class BookController extends AbstractController
      */
     public function show(Book $book, BookRepository $bookRepository, SerializerInterface $serializer)
     {
-        //$bookFind = $bookRepository->find($book->getId());
-        //$encoders = [new JsonEncoder()];
-        //$normalizers = [new ObjectNormalizer()];
-        //$serializer = new Serializer($normalizers, $encoders);
-        $bookFind = $bookRepository->findOneToDTO($book->getId());
+        $bookFind = new BookOutput($book);
         $data= json_encode($bookFind);
         return new Response($data, 200, ['Content-Type'=>'application/json']);
     }
@@ -58,53 +52,30 @@ class BookController extends AbstractController
     /**
      * @Route("/books", name="new_book", methods={"POST"})
      */
-    public function new(Request $request, EntityManagerInterface $manager, CategoryRepository $CategoryRepository)
+    public function new(EntityManagerInterface $manager, Request $request, SerializerInterface $serializer, CategoryRepository $categoryRepository)
     {
-        $book=json_decode($request->getContent());
-        $newBook= new BookInput();
-        $newBook->setTitle($book->title);
-        if(property_exists($book, 'categories')){
-            foreach($book->categories as $item){
-                $newBook->addCategory($CategoryRepository->findOneToDTO($item));
-            }
-        }
+        $newBook = new Book();
+        $bookInput = $serializer->deserialize($request->getContent(),BookInput::class,'json');
+        $bookInput->createBookToPersist($newBook, $categoryRepository);
         $manager->persist($newBook);
+
         $manager->flush();
-        $data=[
-            'status'=> 201,
-            'message'=> "le livre a bien été ajouté"
-        ];
-        return new JsonResponse($data, 201);
-    }
-    /**
-     * @Route("/books/{id}", name="update_book", methods={"PUT"})
-     */
-    public function update(Request $request, Book $book, EntityManagerInterface $manager, CategoryRepository $CategoryRepository, ValidatorInterface $validator, BookRepository$BookRepository)
-    {
-        $bookUpdate = $BookRepository->find($book->getId()); // on récupère le livre correspondant à l'id
-        $data = json_decode($request->getContent()); // on transforme la requête utilisateur pour correspondre aux données du livre
-        foreach ($data as $key => $value)
-        {
-            if ($key && !empty($value)) {
-                if ($key == 'categories') {
-                    $bookUpdate->clearCategories();
-                    foreach ($data->categories as $item) {
-                        $bookUpdate->addCategory($CategoryRepository->findOneToDTO($item));
-                    }
-                }else{
-                    $setter = 'set' . ucfirst($key);
-                    $bookUpdate->$setter($value);
-                }
-            }
-        }
-        $manager->flush();
-        $data=[
-            'status'=> 201,
-            'message'=> "le livre a bien été modifié"
-        ];
+        $data=['status'=> 201,'message'=> "le livre a bien été ajouté"];
         return new JsonResponse($data, 201);
     }
 
+    /**
+     * @Route("/books/{id}", name="update_book", methods={"PUT"})
+     */
+    public function update(Book $book, Request $request, EntityManagerInterface $manager, CategoryRepository $categoryRepository, BookRepository $bookRepository, SerializerInterface $serializer)
+    {
+        $bookInput = $serializer->deserialize($request->getContent(),BookInput::class,'json');
+        $bookInput->createBookToPersist($book, $categoryRepository);
+
+        $manager->flush();
+        $data=['status'=> 201, 'message'=> "le livre a bien été modifié"];
+        return new JsonResponse($data, 201);
+    }
     /**
      * @Route("/books/{id}", name="delete_book", methods={"DELETE"})
      */
@@ -112,7 +83,10 @@ class BookController extends AbstractController
     {
         $em->remove($book);
         $em->flush();
-        return new Response(null, 204);
+        return new Response("le livre a bien été supprimé", 204);
     }
+
+
+
 
 }

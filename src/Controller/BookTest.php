@@ -16,12 +16,14 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-
+/**
+ * @Route("/api")
+ */
 class BookTest extends AbstractController
 {
 
     /**
-     * @Route("/bookstest", name="list_books", methods={"GET"})
+     * @Route("/bookstest", name="list_booktest", methods={"GET"})
      */
     public function index(BookRepository $bookRepository, SerializerInterface $serializer)
     {
@@ -31,7 +33,7 @@ class BookTest extends AbstractController
     }
 
     /**
-     * @Route("/bookstest/{id}/categories"), name="list_category_of_book", methods={"GET"})
+     * @Route("/bookstest/{id}/categories"), name="list_category_of_booktest", methods={"GET"})
      */
     public function bookCategories(Book $book, BookRepository $bookRepository, CategoryRepository $categoryRepository, SerializerInterface $serializer)
     {
@@ -42,7 +44,7 @@ class BookTest extends AbstractController
     }
 
     /**
-     * @Route("/books/test", name="new_booktest", methods={"POST"})
+     * @Route("/bookstest", name="new_booktest", methods={"POST"})
      */
     public function new(Request $request, SerializerInterface $serializer, EntityManagerInterface $manager)
     {
@@ -57,7 +59,7 @@ class BookTest extends AbstractController
     }
 
     /**
-     * @Route("/books/test/{id}", name="update_booktest", methods={"PUT"})
+     * @Route("/bookstest/{id}", name="update_booktest", methods={"PUT"})
      */
     public function update(Request $request, Book $book, SerializerInterface $serializer, EntityManagerInterface $manager, ValidatorInterface $validator)
     {
@@ -82,6 +84,66 @@ class BookTest extends AbstractController
             'message'=> "le livre a bien été modifié"
         ];
         return new JsonResponse($data, 201);
+    }
+
+    /**
+     * @Route("/bookstest", name="new_booktest2", methods={"POST"})
+     */
+    public function newTest(Request $request, EntityManagerInterface $manager, CategoryRepository $CategoryRepository)
+    {
+        $book=json_decode($request->getContent());
+        $newBook = new Book();
+        $newBook->setTitle($book->title);
+        if(property_exists($book, 'categories')){
+            foreach($book->categories as $item){
+                $newBook->addCategory($CategoryRepository->findOneToDTO($item));
+            }
+        }
+        $manager->persist($newBook);
+        $manager->flush();
+        $data=[
+            'status'=> 201,
+            'message'=> "le livre a bien été ajouté"
+        ];
+        return new JsonResponse($data, 201);
+    }
+
+    /**
+     * @Route("/bookstest/{id}", name="updatetest_booktest", methods={"PUT"})
+     */
+    public function updateTest(Request $request, Book $book, EntityManagerInterface $manager, CategoryRepository $CategoryRepository, BookRepository$BookRepository)
+    {
+        $bookUpdate = $BookRepository->find($book->getId()); // instance de Book retrouvé via son Id
+        $data = json_decode($request->getContent());
+        foreach ($data as $key => $value) {
+            if ($key && !empty($value)) {
+                if ($key == 'categories') {
+                    $bookUpdate->clearCategories();
+                    foreach ($data->categories as $item) {
+                        $bookUpdate->addCategory($CategoryRepository->findOneToDTO($item));
+                    }
+                }else{
+                    $setter = 'set' . ucfirst($key);
+                    $bookUpdate->$setter($value);
+                }
+            }
+        }
+        $manager->flush();
+        $data=[
+            'status'=> 201,
+            'message'=> "le livre a bien été modifié"
+        ];
+        return new JsonResponse($data, 201);
+    }
+
+    /**
+     * @Route("/bookstest/{id}", name="deletetest_book", methods={"DELETE"})
+     */
+    public function delete(Book $book, EntityManagerInterface $em)
+    {
+        $em->remove($book);
+        $em->flush();
+        return new Response("le livre a bien été supprimé", 204);
     }
 
 }

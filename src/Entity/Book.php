@@ -24,7 +24,7 @@ class Book
      * @ORM\Column(type="string", length=255)
      * @Groups({"books:read", "books:write"})
      */
-    private $title;
+    protected $title;
 
     /**
      * @ORM\ManyToMany(targetEntity="App\Entity\Category", inversedBy="books")

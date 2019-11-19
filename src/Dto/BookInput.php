@@ -2,80 +2,85 @@
 
 namespace App\Dto;
 
-use App\Entity\Category;
-use Symfony\Component\Serializer\Annotation\Groups;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity(repositoryClass="App\Repository\BookRepository")
- */
+use App\Entity\Book;
+use App\Entity\Category;
+use App\Repository\CategoryRepository;
+
 class BookInput
 {
-    /**
-     * @ORM\Id()
-     * @ORM\GeneratedValue()
-     * @ORM\Column(type="integer")
-     */
-    private $id;
-
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    private $title;
-
-    /**
-     * @ORM\ManyToMany(targetEntity="App\Entity\Category", inversedBy="books")
-     */
-    private $categories;
+    public $title;
+    public $categories;
 
     public function __construct()
     {
-        $this->categories = new ArrayCollection();
+        $this->categories=[];
     }
 
-    public function getId(): ?int
+   public function createFromBook(Book $book)
     {
-        return $this->id;
+        $this->title= $book->getTitle();
+        $this->categories = array_map(function (Category $category){
+            return $category->getId();
+        },$book->getCategories());
+        return $this;
     }
 
-    public function getTitle(): ?string
+    public function createBookToPersist(Book $book, CategoryRepository $categoryRepository)
+    {
+        $book->setTitle($this->getTitle());
+        foreach($this->getCategories() as $id){
+            $book->addCategory($categoryRepository->find($id));
+        }
+    }
+
+    public function updateBook(Book $book){
+        $book->setTitle($this->getTitle());
+    }
+
+    public function getTitle(): string
     {
         return $this->title;
     }
 
-    public function setTitle(string $title): self
+    public function setTitle(string $title)
     {
         $this->title = $title;
-
         return $this;
     }
 
-    /**
-     * @return Collection|Category[]
-     */
-    public function getCategories(): Collection
+    public function getCategories(): ?array
     {
         return $this->categories;
     }
 
-    public function addCategory(Category $category): self
+    public function addCategory(int $category): self
     {
-        if (!$this->categories->contains($category)) {
+        if (in_array($category,$this->categories)) {
             $this->categories[] = $category;
         }
 
         return $this;
     }
 
-    public function removeCategory(Category $category): self
+    public function removeCategories(int $category): self
     {
-        if ($this->categories->contains($category)) {
-            $this->categories->removeElement($category);
+        if (in_array($category,$this->categories)) {
+            $this->categories[] = $category;
         }
 
         return $this;
+    }
+
+    public function setCategories(array $categories)
+    {
+        $this->categories = $categories;
+    }
+
+    public function addCategoriesToBookPersist(Book $book, CategoryRepository $categoryRepository){
+        foreach($this->getCategories() as $id){
+            $book->addCategory($categoryRepository->find($id));
+        }
     }
 }
 

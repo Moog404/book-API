@@ -55,6 +55,7 @@ final class BookOutput
         }
         return $ids;
     }
+
     public function getCategoriesNamesFromBook(Book $book): array
     {
         $names= [];
