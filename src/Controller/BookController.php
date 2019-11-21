@@ -7,6 +7,7 @@ use App\Dto\BookOutput;
 use App\Entity\Book;
 use App\Repository\BookRepository;
 use App\Repository\CategoryRepository;
+use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,9 +26,19 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class BookController extends AbstractController
 {
     /**
-     * @Route("/books", name="list_books_with_categories", methods={"GET"})
+     * @var ObjectManager
      */
-    public function index(BookRepository $bookRepository, SerializerInterface $serializer)
+    private $em;
+
+    public function __construct(ObjectManager $em)
+    {
+        $this->em = $em;
+    }
+
+    /**
+     * @Route("/books", name="list_books", methods={"GET"})
+     */
+    public function index(BookRepository $bookRepository)
     {
         $books=$bookRepository->findAll();
         $allBooks=[];
@@ -42,7 +53,7 @@ class BookController extends AbstractController
     /**
      * @Route("/books/{id}", name="show_book", methods={"GET"})
      */
-    public function show(Book $book, BookRepository $bookRepository, SerializerInterface $serializer)
+    public function show(Book $book)
     {
         $bookFind = new BookOutput($book);
         $data= json_encode($bookFind);
@@ -55,10 +66,11 @@ class BookController extends AbstractController
     public function new(EntityManagerInterface $manager, Request $request, SerializerInterface $serializer, CategoryRepository $categoryRepository)
     {
         $newBook = new Book();
-        $bookInput = $serializer->deserialize($request->getContent(),BookInput::class,'json');
-        $bookInput->createBookToPersist($newBook, $categoryRepository);
+        $bookToAdd = $serializer->deserialize($request->getContent(),BookInput::class,'json');
+        //$bookToAdd->createBookToPersist($newBook, $categoryRepository);
+        $bookToAdd->setBookInstanceTitle($newBook);
+        $bookToAdd->setBookInstanceCategory($newBook, $categoryRepository);
         $manager->persist($newBook);
-
         $manager->flush();
         $data=['status'=> 201,'message'=> "le livre a bien été ajouté"];
         return new JsonResponse($data, 201);
@@ -67,26 +79,23 @@ class BookController extends AbstractController
     /**
      * @Route("/books/{id}", name="update_book", methods={"PUT"})
      */
-    public function update(Book $book, Request $request, EntityManagerInterface $manager, CategoryRepository $categoryRepository, BookRepository $bookRepository, SerializerInterface $serializer)
+    public function update(Book $book, Request $request, CategoryRepository $categoryRepository, SerializerInterface $serializer)
     {
-        $bookInput = $serializer->deserialize($request->getContent(),BookInput::class,'json');
-        $bookInput->createBookToPersist($book, $categoryRepository);
-
-        $manager->flush();
+        $bookToUpdate = $serializer->deserialize($request->getContent(),BookInput::class,'json');
+        //$bookToUpdate->createBookToPersist($book, $categoryRepository);
+        $bookToUpdate->setBookInstanceTitle($book);
+        $bookToUpdate->setBookInstanceCategory($book, $categoryRepository);
+        $this->em->flush();
         $data=['status'=> 201, 'message'=> "le livre a bien été modifié"];
         return new JsonResponse($data, 201);
     }
     /**
      * @Route("/books/{id}", name="delete_book", methods={"DELETE"})
      */
-    public function delete(Book $book, EntityManagerInterface $em)
+    public function delete(Book $book)
     {
-        $em->remove($book);
-        $em->flush();
+        $this->em->remove($book);
+        $this->em->flush();
         return new Response("le livre a bien été supprimé", 204);
     }
-
-
-
-
 }

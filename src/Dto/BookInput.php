@@ -22,20 +22,27 @@ class BookInput
         $this->title= $book->getTitle();
         $this->categories = array_map(function (Category $category){
             return $category->getId();
-        },$book->getCategories());
+        },$this->getCategories());
         return $this;
     }
 
-    public function createBookToPersist(Book $book, CategoryRepository $categoryRepository)
+    public function setBookInstanceTitle(Book $book)
     {
         $book->setTitle($this->getTitle());
-        foreach($this->getCategories() as $id){
+    }
+
+    public function setBookInstanceCategory(Book $book, CategoryRepository $categoryRepository)
+    {
+        foreach($this->getCategories() as $id) {
             $book->addCategory($categoryRepository->find($id));
         }
     }
 
-    public function updateBook(Book $book){
+    public function updateBook(Book $book, CategoryRepository $categoryRepository){
         $book->setTitle($this->getTitle());
+        foreach($this->getCategories() as $id) {
+            $book->addCategory($categoryRepository->find($id));
+        }
     }
 
     public function getTitle(): string
@@ -77,10 +84,5 @@ class BookInput
         $this->categories = $categories;
     }
 
-    public function addCategoriesToBookPersist(Book $book, CategoryRepository $categoryRepository){
-        foreach($this->getCategories() as $id){
-            $book->addCategory($categoryRepository->find($id));
-        }
-    }
 }
 
