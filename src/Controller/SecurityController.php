@@ -15,6 +15,9 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 
+/**
+ * @Route("/api")
+ */
 class SecurityController extends AbstractController
 {
     /**
@@ -70,7 +73,7 @@ class SecurityController extends AbstractController
     }
 
     /**
-     * @Route("api/user", name="user", methods={"GET"})
+     * @Route("/user", name="user", methods={"GET"})
      */
     public function userConnected()
     {

@@ -6,10 +6,39 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class BookControllerTest extends WebTestCase
 {
+    /**
+     * Create a client with a default Authorization header
+     *
+     * @param string $username
+     * @param string $password
+     *
+     * @return \Symfony\Bundle\FrameworkBundle\Client
+     */
+    protected function createAuthenticatedClient($username = 'admin', $password = 'admin')
+    {
+        $client = static::createClient();
+        $client->request(
+            'POST',
+            '/api/login_check',
+            [], [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode([
+                'username' => $username,
+                'password' => $password,
+            ])
+        );
+
+        $data = json_decode($client->getResponse()->getContent(), true);
+
+        $client = static::createClient();
+        $client->setServerParameter('HTTP_Authorization', sprintf('Bearer %s', $data['token']));
+
+        return $client;
+    }
 
     public function testIndex()
     {
-        $client = static::createClient();
+        $client = $this->createAuthenticatedClient();
         $client->request('GET', '/api/books');
 
         $response=$client->getResponse();
@@ -27,21 +56,21 @@ class BookControllerTest extends WebTestCase
 
     public function testShow()
     {
-        $client = static::createClient();
-
+        $client = $this->createAuthenticatedClient();
         $client->request('GET', '/api/books/fsdg');
         $this->assertEquals(404, $client->getResponse()->getStatusCode());
 
-        $client->request('GET', '/api/books/12');
+        $client->request('GET', '/api/books/2');
         $this->assertTrue($client->getResponse()->isSuccessful());
     }
 
-   public function  testPostNewBook()
+   public function testPostNewBook()
    {
-        $client = static::createClient();
-        $client->request('POST', '/api/books', [], [],
+       $client = $this->createAuthenticatedClient();
+
+       $client->request('POST', '/api/books', [], [],
             ['CONTENT_TYPE' => 'application/json'],
-            '{"title":"un nouveau livre de test avec POST", "categories":[5]}'
+            '{"title":"un nouveau livre de test avec POST", "categories":[4]}'
         );
 
         $response = $client->getResponse();
@@ -59,12 +88,12 @@ class BookControllerTest extends WebTestCase
    }
 
     public function  testUpdateBook() {
-        $client = static::createClient();
+        $client = $this->createAuthenticatedClient();
 
         $client->request(
-            'PUT', '/api/books/12', [], [],
+            'PUT', '/api/books/2', [], [],
             ['CONTENT_TYPE' => 'application/json'],
-            '{"title":"je suis un livre modifié", "categories":[5,6]}'
+            '{"title":"je suis un livre modifié", "categories":[2,3]}'
         );
 
         $response = $client->getResponse();
@@ -76,24 +105,24 @@ class BookControllerTest extends WebTestCase
         $message= $comment["message"];
         $this->assertStringContainsString('le livre a bien été modifié', $message);
 
-        $client->request('GET', '/api/books/12');
+        $client->request('GET', '/api/books/2');
         $content =json_decode($client->getResponse()->getContent());
 
         $this->assertEquals("je suis un livre modifié", $content->title);
-        $this->assertEquals(12, $content->id);
+        $this->assertEquals(2, $content->id);
     }
 
     public function testDeleteBook()
     {
-        $client =static::createClient();
+        $client = $this->createAuthenticatedClient();
 
         $client->request(
-            'DELETE', '/api/books/12');
+            'DELETE', '/api/books/2');
         $response = $client->getResponse();
         $this->assertEquals(204, $response->getStatusCode());
 
         $client->request(
-            'GET', '/api/books/12');
+            'GET', '/api/books/2');
         $response = $client->getResponse();
         $this->assertEquals(404, $response->getStatusCode());
 
