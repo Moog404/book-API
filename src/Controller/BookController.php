@@ -9,6 +9,7 @@ use App\Repository\BookRepository;
 use App\Repository\CategoryRepository;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -89,8 +90,12 @@ class BookController extends AbstractController
         $data=['status'=> 201, 'message'=> "le livre a bien été modifié"];
         return new JsonResponse($data, 201);
     }
+
     /**
      * @Route("/books/{id}", name="delete_book", methods={"DELETE"})
+     *
+     * Require ROLE_ADMIN for only this controller method.
+     * @IsGranted("ROLE_ADMIN")
      */
     public function delete(Book $book)
     {
