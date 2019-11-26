@@ -54,8 +54,5 @@ class BookInputTest extends TestCase
 
         $this->assertEquals(4, $CategoriesOfBook[0]->getId());
         $this->assertEquals("categorie 4", $CategoriesOfBook[0]->getName());
-
-
     }
-
 }

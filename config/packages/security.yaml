@@ -16,6 +16,15 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
+        api_doc:
+            pattern: ^/api/doc
+            security: false
+
+        #register:
+        #    pattern:  ^/register
+        #    stateless: true
+        #    anonymous: true
+
         login:
             pattern:  ^/api/login
             stateless: true
@@ -32,8 +41,8 @@ security:
                 authenticators:
                     - lexik_jwt_authentication.jwt_token_authenticator
 
-        #main:
-        #    anonymous: true
+        main:
+            anonymous: true
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#firewalls-authentication

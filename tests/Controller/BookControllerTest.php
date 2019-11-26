@@ -36,7 +36,17 @@ class BookControllerTest extends WebTestCase
         return $client;
     }
 
-    public function testIndex()
+    public function testIndexNoAuthenticatedClient()
+    {
+        $client = $this->createClient();
+        $client->request('GET', '/api/books');
+
+        $response=$client->getResponse();
+        $this->assertEquals(401, $response->getStatusCode());
+    }
+
+
+    public function testIndexAuthenticatedClient()
     {
         $client = $this->createAuthenticatedClient();
         $client->request('GET', '/api/books');
@@ -62,6 +72,19 @@ class BookControllerTest extends WebTestCase
 
         $client->request('GET', '/api/books/2');
         $this->assertTrue($client->getResponse()->isSuccessful());
+    }
+
+    public function testPostNewBookNoAuthenticatedClient()
+    {
+        $client = $this->createClient();
+
+        $client->request('POST', '/api/books', [], [],
+            ['CONTENT_TYPE' => 'application/json'],
+            '{"title":"un nouveau livre de test avec POST", "categories":[4]}'
+        );
+
+        $response = $client->getResponse();
+        $this->assertEquals(401, $response->getStatusCode());
     }
 
    public function testPostNewBook()

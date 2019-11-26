@@ -7,37 +7,61 @@ use App\Dto\BookOutput;
 use App\Entity\Book;
 use App\Repository\BookRepository;
 use App\Repository\CategoryRepository;
-use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Nelmio\ApiDocBundle\Annotation\Security;
+use Swagger\Annotations as SWG;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @Route("/api")
  */
 class BookController extends AbstractController
 {
+
     /**
-     * @var ObjectManager
+     * @var EntityManagerInterface
      */
     private $em;
 
-    public function __construct(ObjectManager $em)
+    public function __construct(EntityManagerInterface $em)
     {
         $this->em = $em;
     }
 
     /**
      * @Route("/books", name="list_books", methods={"GET"})
+     * @SWG\Get(
+     *     summary="accéder à tous les livres",
+     *     description="récupère tous les livres")
+     * @SWG\Response(
+     *     response=200,
+     *     description="Retourne les livres",
+     *     @SWG\schema(
+     *          @SWG\Property(property="id", type="string"),
+     *          @SWG\Property(property="title", type="string"),
+     *          @SWG\Property(property="categories", type="object",
+     *              @SWG\Property(property="id", type="integer"),
+     *              @SWG\Property(property="name", type="string"),
+     *              @SWG\Property(property="subCategory", type="array",
+     *                  @SWG\Items(type="string"))
+     *          )
+     *     )
+     * )
+     * @SWG\Parameter(
+     *     name="page",
+     *     in="query",
+     *     type="integer",
+     *     description="pagination des livres (10 livres par page)"
+     * )
+     *
+     * @SWG\Tag(name="Book")
+     * @Security(name="Bearer")
      */
     public function index(BookRepository $bookRepository)
     {
@@ -53,6 +77,25 @@ class BookController extends AbstractController
 
     /**
      * @Route("/books/{id}", name="show_book", methods={"GET"})
+     * @SWG\Tag(name="Book")
+     * @SWG\Get(
+     *     summary="récupère les ressources d'un livre ")
+     *
+     * @SWG\Response(
+     *     response=200,
+     *     description="Retourne un livre suivant l'id entrée",
+     *     @SWG\schema(
+     *          @SWG\Property(property="id", type="integer"),
+     *          @SWG\Property(property="title", type="string"),
+     *          @SWG\Property(property="category", type="array",
+     *              @SWG\Items(type="integer"))
+     *     )
+     * )
+     * @SWG\Response(
+     *     response=404,
+     *     description="pas de ressource trouvée"
+     * )
+     * @Security(name="Bearer")
      */
     public function show(Book $book)
     {
@@ -63,12 +106,43 @@ class BookController extends AbstractController
 
     /**
      * @Route("/books", name="new_book", methods={"POST"})
+     * @SWG\Tag(name="Book")
+     * @SWG\Post(summary="Ajout d'un livre")
+     * @SWG\Parameter(
+     *     name="body",
+     *     in="body",
+     *     description="title* / category peut ne pas être défini, un tableau vide ou un tableau avec les id de catégories existantes",
+     *     @SWG\Schema(
+     *          required={"title"},
+     *          @SWG\Property(property="title", type="string"),
+     *          @SWG\Property(property="category", type="array",
+     *              @SWG\Items(type="integer"))
+     *     )
+     * )
+     * @SWG\Response(
+     *     response=200,
+     *     description="ajout d'un nouveau livre",
+     *     @SWG\schema(
+     *          required={"title"},
+     *          @SWG\Property(property="title", type="string"),
+     *          @SWG\Property(property="category", type="array",
+     *              @SWG\Items(type="integer"))
+     *     )
+     * )
+     * @SWG\Response(
+     *     response=400,
+     *     description="entrée non valide"
+     * )
+     *  @SWG\Response(
+     *     response=401,
+     *     description="Vous devez vous connecter pour pourvoir poster un nouveau livre"
+     * )
+     * @Security(name="Bearer")
      */
     public function new(EntityManagerInterface $manager, Request $request, SerializerInterface $serializer, CategoryRepository $categoryRepository)
     {
         $newBook = new Book();
         $bookToAdd = $serializer->deserialize($request->getContent(),BookInput::class,'json');
-        //$bookToAdd->createBookToPersist($newBook, $categoryRepository);
         $bookToAdd->setBookInstanceTitle($newBook);
         $bookToAdd->setBookInstanceCategory($newBook, $categoryRepository);
         $manager->persist($newBook);
@@ -79,11 +153,31 @@ class BookController extends AbstractController
 
     /**
      * @Route("/books/{id}", name="update_book", methods={"PUT"})
+     * @SWG\Tag(name="Book")
+     * @SWG\Put(
+     *     summary="mis à jour d'un livre")
+     * @SWG\Response(
+     *     response=200,
+     *     description="Le livre a bien été modifié",
+     *     @SWG\schema(
+     *          @SWG\Property(property="title", type="string"),
+     *          @SWG\Property(property="category", type="array",
+     *              @SWG\Items(type="integer"))
+     *     )
+     * )
+     * @SWG\Response(
+     *     response=400,
+     *     description="entrée invalide, le livre ne peut pas être modifié"
+     * )
+     * @SWG\Response(
+     *     response=404,
+     *     description="la ressource n'a pas été trouvée ou inexistante"
+     * )
+     * @Security(name="Bearer")
      */
     public function update(Book $book, Request $request, CategoryRepository $categoryRepository, SerializerInterface $serializer)
     {
         $bookToUpdate = $serializer->deserialize($request->getContent(),BookInput::class,'json');
-        //$bookToUpdate->createBookToPersist($book, $categoryRepository);
         $bookToUpdate->setBookInstanceTitle($book);
         $bookToUpdate->setBookInstanceCategory($book, $categoryRepository);
         $this->em->flush();
@@ -93,9 +187,16 @@ class BookController extends AbstractController
 
     /**
      * @Route("/books/{id}", name="delete_book", methods={"DELETE"})
-     *
-     * Require ROLE_ADMIN for only this controller method.
-     * @IsGranted("ROLE_ADMIN")
+     * @SWG\Tag(name="Book")
+     * @SWG\Delete(summary="suppression d'un livre")
+     * @SWG\Response(
+     *     response=204,
+     *     description="le livre a bien été supprimé"
+     * )
+     * @SWG\Response(
+     *     response=404,
+     *     description="la ressource n'a pas été trouvée ou inexistante"
+     * )
      */
     public function delete(Book $book)
     {

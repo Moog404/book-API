@@ -3,12 +3,11 @@
 namespace App\Dto;
 
 use App\Entity\Book;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
-use Symfony\Component\HttpFoundation\Request;
+
 
 final class BookOutput
 {
+
     public $id;
     public $title;
     public $categories;
@@ -68,6 +67,7 @@ final class BookOutput
 
     /**
      * @param array $categories
+     *
      */
     public function setCategories(array $categories): void
     {
